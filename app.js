@@ -439,10 +439,10 @@ function applyCoverImage(coverEl, url) {
   coverEl.style.backgroundImage = `url(${url})`;
   coverEl.style.backgroundSize = 'cover';
   coverEl.style.backgroundPosition = 'center';
-  // Remove SVG fallback but keep the delete button
-  const deleteBtn = coverEl.querySelector('.book-delete-btn');
+  // Remove SVG fallback but keep the action buttons
+  const buttons = coverEl.querySelectorAll('.book-cover-btn');
   coverEl.innerHTML = '';
-  if (deleteBtn) coverEl.appendChild(deleteBtn);
+  buttons.forEach(btn => coverEl.appendChild(btn));
 }
 
 function extractDominantColor(img) {
@@ -727,9 +727,20 @@ function render() {
       coverFace.style.transform = 'translateX(' + (width - 1) + 'px) rotateY(90deg)';
       coverFace.innerHTML = buildCover(book.title, book.author, coverWidth, height, color.bg, color.dark);
 
+      // Edit button on cover (visible when book is open)
+      const editBtn = document.createElement('button');
+      editBtn.className = 'book-cover-btn book-edit-btn';
+      editBtn.title = 'Edit book';
+      editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showEditBook(book.title, book.author);
+      });
+      coverFace.appendChild(editBtn);
+
       // Delete button on cover (visible when book is open)
       const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'book-delete-btn';
+      deleteBtn.className = 'book-cover-btn book-delete-btn';
       deleteBtn.title = 'Remove from library';
       deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
       deleteBtn.addEventListener('click', (e) => {
@@ -867,7 +878,12 @@ function handleEditInitials(e) {
   hideEditInitials();
 }
 
+let _editingBook = null; // { title, author } of book being edited
+
 function showAddBook() {
+  _editingBook = null;
+  document.querySelector('#app-add-book .modal-heading').textContent = 'New Addition';
+  document.querySelector('#app-add-book .submit-btn').innerHTML = 'ADD TO COLLECTION <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>';
   const state = getState();
   state.view = 'add';
   setState(state);
@@ -882,7 +898,32 @@ function showAddBook() {
   }
 }
 
+function showEditBook(title, author) {
+  const state = getState();
+  const book = state.books.find(b => b.title === title && b.author === author);
+  if (!book) return;
+  _editingBook = { title, author };
+  document.querySelector('#app-add-book .modal-heading').textContent = 'Edit Book';
+  document.querySelector('#app-add-book .submit-btn').innerHTML = 'SAVE CHANGES <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>';
+  document.getElementById('book-isbn').value = '';
+  document.getElementById('book-title').value = book.title;
+  document.getElementById('book-author').value = book.author;
+  document.getElementById('book-pages').value = book.pages || '';
+  const dateGroup = document.getElementById('date-completed-group');
+  const dateInput = document.getElementById('book-date-completed');
+  if (book.status === 'read') {
+    dateGroup.style.display = '';
+    dateInput.value = book.dateCompleted || '';
+  } else {
+    dateGroup.style.display = 'none';
+    dateInput.value = '';
+  }
+  state.view = 'add';
+  setState(state);
+}
+
 function hideAddBook() {
+  _editingBook = null;
   const state = getState();
   state.view = 'main';
   setState(state);
@@ -907,9 +948,10 @@ function lookupIsbn(isbn) {
       const titleEl = document.getElementById('book-title');
       const authorEl = document.getElementById('book-author');
       const pagesEl = document.getElementById('book-pages');
-      if (!titleEl.value.trim() && entry.title) titleEl.value = entry.title;
-      if (!authorEl.value.trim() && entry.authors && entry.authors[0]) authorEl.value = entry.authors[0].name;
-      if (!pagesEl.value && entry.number_of_pages) pagesEl.value = entry.number_of_pages;
+      const overwrite = !!_editingBook;
+      if ((overwrite || !titleEl.value.trim()) && entry.title) titleEl.value = entry.title;
+      if ((overwrite || !authorEl.value.trim()) && entry.authors && entry.authors[0]) authorEl.value = entry.authors[0].name;
+      if ((overwrite || !pagesEl.value) && entry.number_of_pages) pagesEl.value = entry.number_of_pages;
     })
     .catch(() => {});
 }
@@ -922,6 +964,29 @@ function handleAddBook(e) {
   let title = document.getElementById('book-title').value.trim();
   let author = document.getElementById('book-author').value.trim();
   const pagesVal = document.getElementById('book-pages').value.trim();
+
+  if (_editingBook) {
+    if (!title || !author) return;
+    const state = getState();
+    const book = state.books.find(b => b.title === _editingBook.title && b.author === _editingBook.author);
+    if (!book) return;
+    book.title = title;
+    book.author = author;
+    book.pages = parseInt(pagesVal, 10) || book.pages;
+    if (book.status === 'read') {
+      book.dateCompleted = document.getElementById('book-date-completed').value || book.dateCompleted;
+    }
+    state.userStarted = true;
+    state.view = 'main';
+    setState(state);
+    document.getElementById('add-book-form').reset();
+    _editingBook = null;
+    render();
+    if (isbnVal) {
+      resolveCoverId(isbnVal, book);
+    }
+    return;
+  }
 
   // If ISBN is provided but title/author are empty, look up and submit after
   if (isbnVal && (!title || !author)) {

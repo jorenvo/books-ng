@@ -394,10 +394,9 @@ body {
 }
 
 /* Delete button on book cover */
-.book-delete-btn {
+.book-cover-btn {
   position: absolute;
   top: 6px;
-  right: 6px;
   width: 24px;
   height: 24px;
   border: none;
@@ -415,14 +414,22 @@ body {
   z-index: 5;
 }
 
-.book-delete-btn svg {
+.book-cover-btn svg {
   width: 14px;
   height: 14px;
 }
 
-.book-wrapper.open .book-delete-btn {
+.book-edit-btn { right: 34px; }
+.book-delete-btn { right: 6px; }
+
+.book-wrapper.open .book-cover-btn {
   opacity: 0.7;
   pointer-events: auto;
+}
+
+.book-wrapper.open .book-edit-btn:hover {
+  opacity: 1;
+  background: var(--accent);
 }
 
 .book-wrapper.open .book-delete-btn:hover {
