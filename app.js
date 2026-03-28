@@ -205,15 +205,16 @@ function getState() {
 }
 
 function setState(state) {
+  let hash;
   if (!state.userStarted) {
-    // Only store lightweight fields — keep default books out of the URL
     const light = { view: state.view, tab: state.tab };
     if (state.initials) light.initials = state.initials;
     if (state.darkMode !== undefined) light.darkMode = state.darkMode;
-    window.location.hash = encodeState(light);
+    hash = encodeState(light);
   } else {
-    window.location.hash = encodeState(state);
+    hash = encodeState(state);
   }
+  history.replaceState(null, '', '#' + hash);
 }
 
 function initState() {
@@ -565,6 +566,7 @@ const HEADINGS = {
 };
 
 function render() {
+  const scrollY = window.scrollY;
   const state = getState();
 
   // View toggle
@@ -609,7 +611,8 @@ function render() {
   });
 
   // Split books into shelf rows based on available width
-  const shelfPadding = 80; // 40px padding each side
+  const areaStyle = getComputedStyle(area);
+  const shelfPadding = parseFloat(areaStyle.paddingLeft) + parseFloat(areaStyle.paddingRight);
   const availableWidth = area.clientWidth - shelfPadding || 800;
   const rows = [];
   let currentRow = [];
@@ -835,6 +838,8 @@ function render() {
     li.textContent = a.text;
     activityList.appendChild(li);
   });
+
+  window.scrollTo(0, scrollY);
 }
 
 // === Navigation ===
@@ -846,6 +851,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     state.tab = item.dataset.status;
     state.view = 'main';
     setState(state);
+    render();
     // Close mobile sidebar
     document.getElementById('sidebar').classList.remove('open');
     document.querySelector('.sidebar-overlay').classList.remove('open');
@@ -875,6 +881,7 @@ function handleEditInitials(e) {
   const state = getState();
   state.initials = val;
   setState(state);
+  render();
   hideEditInitials();
 }
 
@@ -887,6 +894,7 @@ function showAddBook() {
   const state = getState();
   state.view = 'add';
   setState(state);
+  render();
   const dateGroup = document.getElementById('date-completed-group');
   const dateInput = document.getElementById('book-date-completed');
   if (state.tab === 'read') {
@@ -920,6 +928,7 @@ function showEditBook(title, author) {
   }
   state.view = 'add';
   setState(state);
+  render();
 }
 
 function hideAddBook() {
@@ -927,6 +936,7 @@ function hideAddBook() {
   const state = getState();
   state.view = 'main';
   setState(state);
+  render();
   document.getElementById('add-book-form').reset();
 }
 
@@ -1139,6 +1149,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
         if (state.activity.length > MAX_ACTIVITY) state.activity.length = MAX_ACTIVITY;
         state.userStarted = true;
         setState(state);
+        render();
       }
     } catch (_) {}
   });
@@ -1397,6 +1408,7 @@ document.addEventListener('keydown', (e) => {
     state.tab = tabs[e.key - 1];
     state.view = 'main';
     setState(state);
+    render();
   }
 });
 
@@ -1414,7 +1426,13 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 // === Init ===
 
 window.addEventListener('hashchange', render);
-window.addEventListener('resize', render);
+let _lastWidth = window.innerWidth;
+window.addEventListener('resize', () => {
+  if (window.innerWidth !== _lastWidth) {
+    _lastWidth = window.innerWidth;
+    render();
+  }
+});
 initState();
 applyDarkMode();
 render();
