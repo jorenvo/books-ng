@@ -1398,6 +1398,20 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    const open = document.querySelector('.book-wrapper.open');
+    if (!open) return;
+    e.preventDefault();
+    const all = Array.from(document.querySelectorAll('.book-wrapper'));
+    const idx = all.indexOf(open);
+    const next = e.key === 'ArrowRight' ? all[idx + 1] : all[idx - 1];
+    if (!next) return;
+    open.classList.remove('open');
+    next.classList.add('open');
+    next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    return;
+  }
+
   if (inInput || e.ctrlKey || e.metaKey || e.altKey) return;
 
   const tabs = ['read', 'reading', 'wishlist'];
