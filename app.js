@@ -906,6 +906,7 @@ function showAddBook() {
     dateGroup.style.display = 'none';
     dateInput.value = '';
   }
+  document.getElementById('cover-group').style.display = 'none';
   document.getElementById('book-isbn').focus();
 }
 
@@ -929,10 +930,22 @@ function showEditBook(title, author) {
     dateGroup.style.display = 'none';
     dateInput.value = '';
   }
+  document.getElementById('cover-group').style.display = book.coverId ? '' : 'none';
   state.view = 'add';
   setState(state);
   render();
   document.getElementById('book-isbn').focus();
+}
+
+function removeCover() {
+  if (!_editingBook) return;
+  const state = getState();
+  const book = state.books.find(b => b.title === _editingBook.title && b.author === _editingBook.author);
+  if (!book) return;
+  delete book.coverId;
+  state.userStarted = true;
+  setState(state);
+  document.getElementById('cover-group').style.display = 'none';
 }
 
 function hideAddBook() {
@@ -1191,7 +1204,15 @@ function showImport() {
   document.getElementById('app-import').style.display = 'flex';
   document.getElementById('import-csv').value = '';
   document.getElementById('import-status').textContent = '';
+  document.getElementById('import-csv').focus();
 }
+
+document.getElementById('import-csv').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    handleImport();
+  }
+});
 
 function hideImport() {
   document.getElementById('app-import').style.display = 'none';
