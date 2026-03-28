@@ -1190,12 +1190,29 @@ function toggleSidebar() {
 // === Share ===
 
 function shareLibrary() {
-  navigator.clipboard.writeText(window.location.href).then(() => {
-    const btn = document.querySelector('.share-btn');
-    const textNode = btn.firstChild;
-    textNode.textContent = 'Link Copied! ';
+  const btn = document.querySelector('.share-btn');
+  const textNode = btn.firstChild;
+  function showFeedback(msg) {
+    textNode.textContent = msg + ' ';
     setTimeout(() => { textNode.textContent = 'Share Library '; }, 2000);
-  });
+  }
+  const url = window.location.href;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(
+      () => showFeedback('Link Copied!'),
+      () => showFeedback('Link Copied!')
+    );
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showFeedback('Link Copied!');
+  }
 }
 
 // === CSV Import ===
