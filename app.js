@@ -759,6 +759,8 @@ function render() {
         loadCoverImage(book.coverId, coverFace, spineFace, seed, color.dark);
       }
 
+      wrapper.dataset.title = book.title;
+      wrapper.dataset.author = book.author;
       wrapper.setAttribute('draggable', 'true');
       wrapper.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', JSON.stringify({ title: book.title, author: book.author }));
@@ -904,6 +906,7 @@ function showAddBook() {
     dateGroup.style.display = 'none';
     dateInput.value = '';
   }
+  document.getElementById('book-isbn').focus();
 }
 
 function showEditBook(title, author) {
@@ -929,6 +932,7 @@ function showEditBook(title, author) {
   state.view = 'add';
   setState(state);
   render();
+  document.getElementById('book-isbn').focus();
 }
 
 function hideAddBook() {
@@ -1410,6 +1414,15 @@ document.addEventListener('keydown', (e) => {
     next.classList.add('open');
     next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     return;
+  }
+
+  if (e.key === 'e' && !inInput) {
+    const open = document.querySelector('.book-wrapper.open');
+    if (open) {
+      e.preventDefault();
+      showEditBook(open.dataset.title, open.dataset.author);
+      return;
+    }
   }
 
   if (inInput || e.ctrlKey || e.metaKey || e.altKey) return;
